@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>resQ</title>
+    
+    <!-- Leaflet CSS for Real Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <style>
+        :root {
+            --primary: #00BCD4; 
+            --primary-dark: #0097A7;
+            --bg-light: #E0F7FA;
+            --bg-dark: #B2EBF2;
+            --accent: #00E5FF;
+            --text-dark: #263238; 
+            --text-gray: #607D8B;
+            --white: #ffffff;
+            --app-bg: linear-gradient(135deg, var(--bg-light), var(--bg-dark));
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            max-height: 850px;
+            background: var(--app-bg);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-header {
+            background: var(--primary);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 2000;
+        }
+        
+        .header-logo {
+            color: white; 
+            margin: 0; 
+            text-align: left; 
+            font-size: 20px; 
+            font-weight: 700;
+            display: flex; 
+            align-items: center; 
+            gap: 10px;
+        }
+
+        .header-icon {
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .header-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .screen {
+            display: none;
+            padding: 20px;
+            flex: 1;
+            flex-direction: column;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .screen.active {
+            display: flex;
+        }
+
+        #location-screen, #hospital-list-screen {
+            padding: 0;
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero-card {
+            background: var(--white);
+            text-align: center;
+            padding: 30px 20px;
+            border-radius: 20px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+        }
+
+        .icon-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: var(--bg-light);
+            color: var(--primary);
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .hero-card h2 {
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .hero-card p {
+            color: var(--text-gray);
+            font-size: 14px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+            padding: 0 10px;
+        }
+
+        .btn-primary {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 16px;
+            font-size: 16px;
+            border-radius: 14px;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(0, 188, 212, 0.25);
+            transition: background 0.3s, transform 0.1s;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .stats-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: var(--white);
+            padding: 16px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .stat-icon.blue { background: #E8F0FE; color: #1A73E8; }
+        .stat-icon.green { background: #E8F5E9; color: #2E7D32; }
+
+        .stat-info p {
+            font-size: 11px;
+            color: var(--text-gray);
+            margin-bottom: 4px;
+        }
+
+        .stat-info strong {
+            font-size: 14px;
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+
+        .emergency-card {
+            background: #FFFDE7;
+            border: 1px solid #FFF59D;
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+
+        .emergency-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #001f3f;
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .emergency-header svg {
+            color: #D97706;
+        }
+
+        .emergency-card p {
+            font-size: 13px;
+            color: #4B5563;
+            margin-bottom: 16px;
+        }
+
+        .emergency-btn {
+            background: #D97706;
+            color: var(--white);
+            display: inline-block;
+            text-align: center;
+            text-decoration: none;
+            font-weight: bold;
+            width: auto;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.2);
+        }
+
+        .loc-header {
+            background: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            z-index: 1000;
+            position: relative;
+        }
+
+        .map-area {
+            flex: 1;
+            position: relative;
+            background: #E0F2FE;
+        }
+
+        .real-map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .map-pin-center {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            position: relative;
+            top: -16px;
+            z-index: 2;
+        }
+        
+        .map-pin-shadow {
+            position: absolute;
+            width: 20px;
+            height: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 50%;
+            top: 6px;
+            z-index: 1;
+        }
+
+        .map-controls {
+            position: absolute;
+            right: 15px;
+            top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .map-btn {
+            background: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            font-size: 22px;
+            color: #333;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 300;
+        }
+
+        .map-btn.round {
+            border-radius: 50%;
+            position: absolute;
+            right: 15px;
+            bottom: 20px;
+            color: #1A73E8;
+            z-index: 1000;
+        }
+
+        .loc-bottom-sheet {
+            background: white;
+            border-radius: 24px 24px 0 0;
+            padding: 24px 20px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            z-index: 1000;
+            position: relative;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+        }
+
+        .search-box input {
+            border: none;
+            background: transparent;
+            margin: 0;
+            padding: 0 10px;
+            flex: 1;
+            font-size: 15px;
+            outline: none;
+            color: #374151;
+        }
+
+        .search-box input::placeholder {
+            color: #9CA3AF;
+        }
+
+        .loc-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 0;
+            cursor: pointer;
+        }
+
+        .loc-item:not(:last-child) {
+            border-bottom: 1px solid #F3F4F6;
+        }
+
+        .loc-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 16px;
+        }
+
+        .loc-icon.blue { background: #1A73E8; color: white; }
+        .loc-icon.grey { background: #F3F4F6; color: #6B7280; }
+
+        .loc-text { flex: 1; }
+        .loc-text strong { display: block; color: var(--text-dark); font-size: 15px; margin-bottom: 4px; font-weight: 600;}
+        .loc-text p { color: #6B7280; font-size: 13px; }
+
+        .loc-arrow {
+            color: #9CA3AF;
+            font-size: 20px;
+        }
+
+        .hospital-card {
+            border: 1px solid #F3F4F6;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+            background: var(--white);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+        
+        .h-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            background: var(--bg-light);
+            color: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+        
+        .h-content {
+            flex: 1;
+        }
+        
+        .h-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+        
+        .h-title {
+            font-weight: 700;
+            color: var(--text-dark);
+            font-size: 16px;
+            margin: 0;
+            line-height: 1.3;
+        }
+        
+        .h-arrow {
+            color: #9CA3AF;
+            font-size: 20px;
+            line-height: 1;
+        }
+        
+        .h-rating {
+            font-size: 14px;
+            color: #4B5563;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .h-rating-star { color: #F59E0B; font-size: 16px;}
+        
+        .h-metrics {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: #6B7280;
+            margin-bottom: 8px;
+        }
+        
+        .h-metric-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .h-address {
+            font-size: 13px;
+            color: #6B7280;
+            margin-bottom: 12px;
+        }
+        
+        .h-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #DCFCE7;
+            color: #166534;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .h-badge-dot {
+            width: 6px;
+            height: 6px;
+            background: #166534;
+            border-radius: 50%;
+        }
+
+        /* Leaflet Custom DivIcons */
+        .hospital-pin {
+            width: 28px;
+            height: 28px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            box-shadow: 0 3px 8px rgba(0, 188, 212, 0.4);
+            border: 2px solid white;
+        }
+        .hospital-pin svg { width: 14px; height: 14px; }
+        
+        .user-dot {
+            width: 16px;
+            height: 16px;
+            background: #1A73E8;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.2);
+        }
+
+        .generic-card {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .generic-card select, .generic-card input, .generic-card textarea {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            background: #F9FAFB;
+            color: var(--text-dark);
+            outline: none;
+            font-size: 14px;
+        }
+
+        .generic-card input:focus, .generic-card select:focus, .generic-card textarea:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .traffic-status-banner {
+            background: #E8F5E9;
+            border: 1px solid #4CAF50;
+            color: #2E7D32;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        #chatbot-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 188, 212, 0.3);
+            z-index: 3000;
+        }
+        
+        #chatbot-window {
+            position: absolute;
+            bottom: 90px;
+            right: 20px;
+            width: 300px;
+            height: 400px;
+            background: var(--white);
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 3000;
+        }
+        #chatbot-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        #chatbot-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .msg { padding: 10px 15px; border-radius: 15px; max-width: 80%; font-size: 14px; }
+        .msg.bot { background: #F3F4F6; color: var(--text-dark); align-self: flex-start; }
+        .msg.user { background: var(--primary); color: white; align-self: flex-end; }
+        #chatbot-input-area { display: flex; border-top: 1px solid #eee; }
+        #chatbot-input { flex: 1; border: none; padding: 15px; outline:none; }
+        #chatbot-send { width: auto; background:transparent; border:none; padding: 0 20px; color: var(--primary); font-size: 18px; cursor:pointer;}
+        
+        .driver-avatar {
+            width: 60px; 
+            height: 60px; 
+            border-radius: 50%; 
+            background: #E0F2FE; 
+            overflow: hidden; 
+            border: 2px solid var(--primary);
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    
+    <div class="app-header">
+        <h1 class="header-logo" onclick="navigate('home-screen')" style="cursor: pointer;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle><path d="M12 6v6"></path><path d="M9 9h6"></path></svg>
+            resQ
+        </h1>
+        <div class="header-icon" onclick="navigate('profile-screen')" title="My Profile">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        </div>
+    </div>
+
+    <!-- 0. Home Screen -->
+    <div id="home-screen" class="screen active">
+        <div class="hero-card">
+            <div class="icon-circle">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle><path d="M12 6v6"></path><path d="M9 9h6"></path></svg>
+            </div>
+            <h2>Need Emergency Help?</h2>
+            <p>Request an ambulance from the nearest hospital in seconds</p>
+            <button onclick="navigate('location-screen')" class="btn-primary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle><path d="M12 6v6"></path><path d="M9 9h6"></path></svg>
+                Request Ambulance Now
+            </button>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <div class="stat-info">
+                    <p>Avg. Response</p>
+                    <strong>15-20 min</strong>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                </div>
+                <div class="stat-info">
+                    <p>Hospitals</p>
+                    <strong>24/7 Active</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="emergency-card">
+            <div class="emergency-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                Emergency Hotline
+            </div>
+            <p>For immediate life-threatening emergencies</p>
+            <a href="tel:102" class="emergency-btn">Call 102</a>
+        </div>
+    </div>
+
+    <!-- 1. Location Selection Map Screen -->
+    <div id="location-screen" class="screen">
+        <div class="loc-header">
+            <span style="cursor: pointer; font-size: 22px;" onclick="navigate('home-screen')">←</span>
+            Select Location
+        </div>
+        
+        <div class="map-area">
+            <div id="loc-map-container" class="real-map"></div>
+            
+            <div class="map-controls">
+                <button class="map-btn" onclick="locMap.zoomIn()">+</button>
+                <button class="map-btn" onclick="locMap.zoomOut()">-</button>
+            </div>
+            
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none;">
+                <div class="map-pin-center"></div>
+                <div class="map-pin-shadow"></div>
+            </div>
+            
+            <button class="map-btn round" onclick="locMap.setView(tollygunge, 15)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </div>
+
+        <div class="loc-bottom-sheet">
+            <div class="search-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" placeholder="Search for a location">
+            </div>
+
+            <div class="loc-item" onclick="navigate('hospital-list-screen')">
+                <div class="loc-icon blue">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </div>
+                <div class="loc-text">
+                    <strong>Use Current Location</strong>
+                    <p>Enable GPS for accuracy</p>
+                </div>
+                <div class="loc-arrow">›</div>
+            </div>
+
+            <div style="font-weight: 700; font-size: 15px; margin: 18px 0 8px 0; color: #111827;">Recent</div>
+
+            <div class="loc-item" onclick="navigate('hospital-list-screen')">
+                <div class="loc-icon grey">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                </div>
+                <div class="loc-text">
+                    <strong>Home</strong>
+                    <p>Tollygunge, Kolkata</p>
+                </div>
+                <div class="loc-arrow">›</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Nearest Hospitals Map Screen -->
+    <div id="hospital-list-screen" class="screen">
+        <div class="loc-header" style="flex-direction: column; align-items: flex-start; padding: 16px 20px;">
+            <div style="display:flex; align-items:center; gap: 15px; width: 100%;">
+                <span style="cursor: pointer; font-size: 22px;" onclick="navigate('location-screen')">←</span>
+                <div>
+                    <div style="font-weight: 700; font-size: 18px; line-height: 1.2;">Nearest Hospitals</div>
+                    <div style="font-size: 13px; color: #6B7280; font-weight: normal; margin-top: 4px;">From your location</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-area" style="flex: 0.5; min-height: 200px;">
+            <div id="hosp-map-container" class="real-map"></div>
+        </div>
+
+        <div class="loc-bottom-sheet" style="flex: 1; overflow-y: auto; padding-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin:0; font-size: 18px; color: var(--text-dark);">Available Hospitals</h3>
+                <span style="color: var(--primary); font-size: 14px; font-weight: 600; cursor:pointer;">Filter</span>
+            </div>
+
+            <!-- Hospital List -->
+            <div class="hospital-card" onclick="navigate('booking-screen')">
+                <div class="h-icon-wrapper">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>
+                </div>
+                <div class="h-content">
+                    <div class="h-header">
+                        <h4 class="h-title">M R Bangur<br>Hospital</h4>
+                        <span class="h-arrow">›</span>
+                    </div>
+                    <div class="h-rating"><span class="h-rating-star">★</span> 4.5</div>
+                    <div class="h-metrics">
+                        <div class="h-metric-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>0.8 km</div>
+                        <div class="h-metric-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>3-5 min</div>
+                    </div>
+                    <div class="h-address">Deshapran Sasmal Road, Tollygunge</div>
+                    <div class="h-badge"><div class="h-badge-dot"></div>6 ambulances available</div>
+                </div>
+            </div>
+
+            <div class="hospital-card" onclick="navigate('booking-screen')">
+                <div class="h-icon-wrapper">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>
+                </div>
+                <div class="h-content">
+                    <div class="h-header">
+                        <h4 class="h-title">RSV Hospital</h4>
+                        <span class="h-arrow">›</span>
+                    </div>
+                    <div class="h-rating"><span class="h-rating-star">★</span> 4.7</div>
+                    <div class="h-metrics">
+                        <div class="h-metric-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>1.1 km</div>
+                        <div class="h-metric-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>5-7 min</div>
+                    </div>
+                    <div class="h-address">Deshapran Sasmal Road, Tollygunge</div>
+                    <div class="h-badge"><div class="h-badge-dot"></div>3 ambulances available</div>
+                </div>
+            </div>
+
+            <div class="hospital-card" onclick="navigate('booking-screen')">
+                <div class="h-icon-wrapper">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>
+                </div>
+                <div class="h-content">
+                    <div class="h-header">
+                        <h4 class="h-title">AMRI Hospital<br>Dhakuria</h4>
+                        <span class="h-arrow">›</span>
+                    </div>
+                    <div class="h-rating"><span class="h-rating-star">★</span> 4.6</div>
+                    <div class="h-metrics">
+                        <div class="h-metric-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>3.2 km</div>
+                        <div class="h-metric-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>10-12 min</div>
+                    </div>
+                    <div class="h-address">Gariahat Road, Dhakuria</div>
+                    <div class="h-badge"><div class="h-badge-dot"></div>2 ambulances available</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking / Patient Details Screen -->
+    <div id="booking-screen" class="screen">
+        <h2 style="display: flex; align-items: center; justify-content: space-between; color: var(--text-dark); margin-bottom: 10px;">
+            <span style="cursor: pointer; font-size: 24px;" onclick="navigate('hospital-list-screen')">←</span>
+            Patient Details
+            <span style="width: 24px;"></span> 
+        </h2>
+        
+        <div class="generic-card">
+            <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 18px;">Emergency Details</h3>
+            
+            <input type="text" id="patient-name" placeholder="Patient Full Name" required>
+            <!-- NEW: Phone Number Field added per request -->
+            <input type="tel" id="patient-phone" placeholder="Contact Phone Number" required pattern="[0-9]{10}">
+            
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="patient-age" placeholder="Age" style="flex: 1;" required>
+                <select id="patient-gender" style="flex: 1;">
+                    <option value="" disabled selected>Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            
+            <textarea id="patient-notes" placeholder="Symptoms / Specific Conditions / Additional Notes (Optional)" rows="3" style="height: auto;"></textarea>
+
+            <label style="color: #4B5563; font-size:14px; font-weight:600; display:block; margin-bottom: 8px;">Select Emergency Type:</label>
+            <select id="type">
+                <option value="Basic Life Support">Basic Life Support (BLS)</option>
+                <option value="Advanced Life Support">Advanced Life Support (ALS) - ICU</option>
+                <option value="Neonatal">Neonatal Ambulance (Incubator)</option>
+                <option value="Patient Transport">Patient Transport (Non-Emergency)</option>
+                <option value="Mortuary">Mortuary Ambulance (Hearse)</option>
+            </select>
+        </div>
+        <button class="btn-primary" onclick="navigate('payment-screen')">Proceed to Payment</button>
+    </div>
+
+    <!-- Realistic Payment Screen -->
+    <div id="payment-screen" class="screen">
+        <h2 style="display: flex; align-items: center; justify-content: space-between; color: var(--text-dark); margin-bottom: 10px;">
+            <span style="cursor: pointer; font-size: 24px;" onclick="navigate('booking-screen')">←</span>
+            Payment Details
+            <span style="width: 24px;"></span> 
+        </h2>
+        <div class="generic-card">
+            <h3 style="color: var(--text-dark); margin-bottom: 15px; font-size: 18px;">Fare Breakdown</h3>
+            
+            <div style="display:flex; justify-content:space-between; font-size: 14px; color: #4B5563; margin-bottom: 8px;">
+                <span>Base Fare (BLS)</span><span>₹800</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size: 14px; color: #4B5563; margin-bottom: 8px;">
+                <span>Distance (0.8 km)</span><span>₹200</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size: 14px; color: #4B5563; margin-bottom: 15px;">
+                <span>Priority Routing Surcharge</span><span>₹200</span>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; font-weight: bold; font-size: 20px; color: var(--primary); border-top: 1px dashed #E5E7EB; padding-top: 15px; margin-bottom: 25px;">
+                <span>Total Amount</span><span>₹1200</span>
+            </div>
+            
+            <label style="color: #4B5563; font-size:14px; font-weight:600; display:block; margin-bottom:8px;">Choose Payment Method:</label>
+            <select id="payment-method" onchange="togglePaymentFields()">
+                <option value="upi">UPI (GPay / PhonePe / Paytm)</option>
+                <option value="card">Credit / Debit Card</option>
+                <option value="cash">Cash on Arrival</option>
+            </select>
+            
+            <!-- Dynamic Fields -->
+            <div id="upi-fields" style="margin-top: 15px;">
+                <input type="text" placeholder="Enter UPI ID (e.g., name@okaxis)">
+            </div>
+            
+            <div id="card-fields" style="margin-top: 15px; display: none;">
+                <input type="text" placeholder="Card Number (16 digits)" maxlength="16">
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" placeholder="MM/YY" maxlength="5" style="flex: 1;">
+                    <input type="password" placeholder="CVV" maxlength="3" style="flex: 1;">
+                </div>
+            </div>
+            
+            <div id="cash-fields" style="margin-top: 15px; display: none; text-align: center; color: #6B7280; font-size: 14px; padding: 10px; background: #F3F4F6; border-radius: 8px;">
+                ℹ️ Please prepare <strong>₹1200</strong> in exact change to pay the driver upon arrival.
+            </div>
+            
+            <button class="btn-primary" onclick="processPayment()" id="pay-btn" style="margin-top: 25px; transition: 0.3s ease;">Pay & Confirm Request</button>
+        </div>
+        <button style="background: transparent; color: #6B7280; border: none; width: 100%; font-size: 16px; font-weight: 600; cursor:pointer;" onclick="navigate('booking-screen')">Cancel & Go Back</button>
+    </div>
+
+    <!-- 3. Tracking Map Screen -->
+    <div id="tracking-screen" class="screen">
+        <h2 id="tracking-title" style="color: var(--text-dark);">Ambulance En Route</h2>
+        
+        <div id="traffic-banner" class="traffic-status-banner">
+            <span style="font-size: 18px;">🚦</span>
+            <span id="traffic-text">Connecting to Traffic Control IoT...</span>
+        </div>
+
+        <div class="map-area" style="min-height: 250px; border-radius: 16px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+            <div id="track-map-container" class="real-map"></div>
+        </div>
+
+        <div class="generic-card" style="text-align: center; position:relative; z-index:100; padding-top: 15px;">
+            <!-- NEW: Driver Photo and Info Block -->
+            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #E5E7EB;">
+                <div class="driver-avatar">
+                    <!-- SVG Placeholder Photo for reliability -->
+                    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; margin-top: 8px;">
+                      <circle cx="18" cy="12" r="6" fill="#00BCD4"/>
+                      <path d="M18 20C11.3726 20 6 25.3726 6 32H30C30 25.3726 24.6274 20 18 20Z" fill="#00BCD4"/>
+                    </svg>
+                </div>
+                <div style="text-align: left;">
+                    <p style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-dark);">Rajesh Das</p>
+                    <p style="margin: 2px 0 0 0; font-size: 13px; color: var(--text-gray);">⭐ 4.8 (120+ Life saving trips)</p>
+                    <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 600; color: var(--primary);">📞 +91 9876543210</p>
+                </div>
+            </div>
+
+            <p style="margin-bottom: 5px; font-size: 14px; color: #4B5563;">Assigned Vehicle: <strong style="background: #F3F4F6; padding: 4px 8px; border-radius: 6px; border: 1px solid #D1D5DB; color: #111827;">WB-04-E-1234</strong></p>
+            <h1 style="font-size: 40px; margin: 15px 0; color: var(--primary);" id="eta">8 Min</h1>
+            <p id="eta-subtitle" style="color: var(--text-gray);">Away from your location</p>
+            <button id="phase2-btn" class="btn-primary" style="margin-top: 15px; display: none;" onclick="startTrackingPhase2()">Start Journey to Hospital</button>
+        </div>
+    </div>
+
+    <!-- Review Screen -->
+    <div id="review-screen" class="screen">
+        <h2 style="color: var(--text-dark);">Trip Completed</h2>
+        <div class="generic-card" style="text-align: center; padding: 30px 20px;">
+            <div class="icon-circle" style="background: #E8F5E9; color: #2E7D32; margin: 0 auto 20px auto;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <h3 style="margin-bottom: 10px; color: var(--text-dark);">How was your experience?</h3>
+            <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 25px;">Your feedback helps us improve our emergency response.</p>
+            
+            <div style="font-size: 36px; margin-bottom: 25px; cursor: pointer;">
+                <span id="star-1" onclick="rateStar(1)" style="color: #E5E7EB;">★</span>
+                <span id="star-2" onclick="rateStar(2)" style="color: #E5E7EB;">★</span>
+                <span id="star-3" onclick="rateStar(3)" style="color: #E5E7EB;">★</span>
+                <span id="star-4" onclick="rateStar(4)" style="color: #E5E7EB;">★</span>
+                <span id="star-5" onclick="rateStar(5)" style="color: #E5E7EB;">★</span>
+            </div>
+            
+            <textarea placeholder="Write a review (optional)" style="width: 100%; padding: 15px; border: 1px solid #E5E7EB; border-radius: 12px; background: #F9FAFB; margin-bottom: 20px; outline: none; resize: none; height: 100px; color: var(--text-dark);"></textarea>
+            
+            <button class="btn-primary" onclick="submitReview()">Submit Feedback</button>
+        </div>
+    </div>
+
+    <!-- Profile Screen (Upgraded and Functional) -->
+    <div id="profile-screen" class="screen">
+        <h2 style="display: flex; align-items: center; gap: 15px; color: var(--text-dark); margin-bottom: 15px;">
+            <span style="cursor: pointer; font-size: 24px;" onclick="navigate('home-screen')">←</span>
+            My Profile
+        </h2>
+        
+        <div class="generic-card" style="text-align: center; margin-bottom: 15px;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--bg-light); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; font-size: 28px; font-weight: bold;" id="profile-initials">
+                DU
+            </div>
+            <h3 id="display-name" style="margin-bottom: 5px; color: var(--text-dark);">Demo User</h3>
+            <p id="display-phone" style="color: var(--text-gray); font-size: 14px;">+91 9876543210</p>
+        </div>
+
+        <!-- View Mode -->
+        <div class="generic-card" id="profile-view-mode" style="color: #374151; font-size: 15px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #F3F4F6; padding-bottom: 12px;">
+                <span style="color: var(--text-gray);">Blood Group</span>
+                <strong id="display-blood">O+</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #F3F4F6; padding-bottom: 12px;">
+                <span style="color: var(--text-gray);">Emergency Contact</span>
+                <strong id="display-em-contact">+91 1122334455</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <span style="color: var(--text-gray);">Medical History</span>
+                <strong id="display-history">None</strong>
+            </div>
+            <button class="btn-primary" onclick="toggleProfileEdit()" style="background: white; color: var(--primary); border: 2px solid var(--primary); box-shadow: none;">Edit Profile</button>
+        </div>
+
+        <!-- Edit Mode -->
+        <div class="generic-card" id="profile-edit-mode" style="display: none;">
+            <label style="font-size: 13px; color: var(--text-gray); font-weight: 600;">Full Name</label>
+            <input type="text" id="edit-name" value="Demo User">
+            
+            <label style="font-size: 13px; color: var(--text-gray); font-weight: 600;">Phone Number</label>
+            <input type="tel" id="edit-phone" value="+91 9876543210">
+            
+            <label style="font-size: 13px; color: var(--text-gray); font-weight: 600;">Blood Group</label>
+            <select id="edit-blood">
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="O+" selected>O+</option>
+                <option value="O-">O-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+            </select>
+
+            <label style="font-size: 13px; color: var(--text-gray); font-weight: 600;">Emergency Contact</label>
+            <input type="tel" id="edit-em-contact" value="+91 1122334455">
+            
+            <label style="font-size: 13px; color: var(--text-gray); font-weight: 600;">Medical History</label>
+            <textarea id="edit-history" rows="2">None</textarea>
+            
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn-primary" onclick="toggleProfileEdit()" style="flex: 1; background: #F3F4F6; color: #4B5563; box-shadow: none;">Cancel</button>
+                <button class="btn-primary" onclick="saveProfile()" style="flex: 2;">Save Details</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot -->
+    <div id="chatbot-btn" onclick="toggleChat()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+    </div>
+    <div id="chatbot-window">
+        <div id="chatbot-header">Juhi <span style="cursor:pointer;" onclick="toggleChat()">✖</span></div>
+        <div id="chatbot-messages">
+            <div class="msg bot">Hi I am Juhi how can i help you</div>
+        </div>
+        <div id="chatbot-input-area">
+            <input type="text" id="chatbot-input" placeholder="Type 'help'...">
+            <button id="chatbot-send" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- Leaflet JS Library -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+    // Global Map Variables
+    let locMap, hospMap, trackMap;
+    let trackAmbMarker, tl1Marker, tl2Marker;
+    
+    const tollygunge = [22.4955, 88.3476];
+    const googleTiles = 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+    
+    const userIcon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div class="user-dot"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+    });
+
+    const hospIcon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div class="hospital-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg></div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+    });
+
+    const ambulanceIcon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div class="hospital-pin" style="background: #E53935; font-size:14px;">🚑</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+    });
+
+    window.onload = function() {
+        // Initialize Map 1: Location Selection
+        locMap = L.map('loc-map-container', { zoomControl: false, attributionControl: false }).setView(tollygunge, 15);
+        L.tileLayer(googleTiles, { maxZoom: 20 }).addTo(locMap);
+
+        // Initialize Map 2: Hospital List View
+        hospMap = L.map('hosp-map-container', { zoomControl: false, attributionControl: false, dragging: false }).setView(tollygunge, 14);
+        L.tileLayer(googleTiles, { maxZoom: 20 }).addTo(hospMap);
+        L.marker(tollygunge, {icon: userIcon}).addTo(hospMap); // User location
+        L.marker([22.4925, 88.3456], {icon: hospIcon}).addTo(hospMap); // MR Bangur
+        L.marker([22.4975, 88.3440], {icon: hospIcon}).addTo(hospMap); // RSV
+        L.marker([22.4938, 88.3662], {icon: hospIcon}).addTo(hospMap); // KPC
+        L.marker([22.5085, 88.3630], {icon: hospIcon}).addTo(hospMap); // AMRI
+        L.marker([22.5152, 88.3300], {icon: hospIcon}).addTo(hospMap); // BP Poddar
+
+        // Initialize Map 3: Live Tracking
+        trackMap = L.map('track-map-container', { zoomControl: false, attributionControl: false }).setView([22.4940, 88.3466], 15);
+        L.tileLayer(googleTiles, { maxZoom: 20 }).addTo(trackMap);
+    };
+
+    function navigate(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        
+        if(screenId === 'location-screen' && locMap) {
+            setTimeout(() => locMap.invalidateSize(), 100);
+        }
+        if(screenId === 'hospital-list-screen' && hospMap) {
+            setTimeout(() => hospMap.invalidateSize(), 100);
+        }
+        if(screenId === 'tracking-screen' && trackMap) {
+            setTimeout(() => trackMap.invalidateSize(), 100);
+        }
+        if(screenId === 'profile-screen') {
+            // make sure it shows view mode by default when opened
+            document.getElementById('profile-view-mode').style.display = 'block';
+            document.getElementById('profile-edit-mode').style.display = 'none';
+        }
+    }
+
+    function togglePaymentFields() {
+        const method = document.getElementById('payment-method').value;
+        document.getElementById('upi-fields').style.display = method === 'upi' ? 'block' : 'none';
+        document.getElementById('card-fields').style.display = method === 'card' ? 'block' : 'none';
+        document.getElementById('cash-fields').style.display = method === 'cash' ? 'block' : 'none';
+    }
+
+    function processPayment() {
+        // Get form values before proceeding
+        const patientName = document.getElementById('patient-name').value;
+        const patientPhone = document.getElementById('patient-phone').value;
+        
+        if (!patientName || !patientPhone) {
+            alert("Please fill in patient name and phone number on the previous screen.");
+            navigate('booking-screen');
+            return;
+        }
+
+        const btn = document.getElementById('pay-btn');
+        const method = document.getElementById('payment-method').value;
+        
+        // Simulating a more realistic multi-stage process
+        btn.innerText = "Authenticating...";
+        btn.disabled = true;
+
+        setTimeout(() => {
+            btn.innerText = method === 'cash' ? "Confirming Booking..." : "Processing Payment...";
+        }, 1200);
+
+        setTimeout(() => {
+            btn.innerText = "Payment Successful!";
+            btn.style.background = "#4CAF50"; // Turn button green
+            
+            setTimeout(() => {
+                navigate('tracking-screen');
+                startTrackingPhase1();
+                
+                // Reset button for next time
+                btn.innerText = "Pay & Confirm Request";
+                btn.disabled = false;
+                btn.style.background = ""; // Restore default color
+            }, 1000);
+        }, 2800);
+    }
+
+    // Phase 1: Hospital to Patient Location
+    function startTrackingPhase1() {
+        const startPoint = [22.4925, 88.3456]; // From MR Bangur
+        const endPoint = tollygunge; // To User
+        
+        document.getElementById('tracking-title').innerText = "Ambulance En Route";
+        document.getElementById('phase2-btn').style.display = 'none';
+
+        // Reset Tracking Map Layers if any
+        trackMap.eachLayer(layer => {
+            if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.CircleMarker) {
+                trackMap.removeLayer(layer);
+            }
+        });
+
+        // Route Line
+        L.polyline([startPoint, endPoint], {color: '#0097A7', weight: 4, dashArray: '5, 5'}).addTo(trackMap);
+        L.marker(endPoint, {icon: userIcon}).addTo(trackMap);
+        
+        // Traffic Lights
+        tl1Marker = L.circleMarker([22.4935, 88.3462], {color: 'white', weight: 2, fillColor: '#E53935', fillOpacity: 1, radius: 8}).addTo(trackMap);
+        tl2Marker = L.circleMarker([22.4945, 88.3470], {color: 'white', weight: 2, fillColor: '#E53935', fillOpacity: 1, radius: 8}).addTo(trackMap);
+
+        trackAmbMarker = L.marker(startPoint, {icon: ambulanceIcon}).addTo(trackMap);
+        trackMap.fitBounds(L.latLngBounds([startPoint, endPoint]), {padding: [20, 20]});
+
+        const etaElement = document.getElementById('eta');
+        const etaSubtitle = document.getElementById('eta-subtitle');
+        const trafficText = document.getElementById('traffic-text');
+        
+        etaElement.innerText = "8 Min";
+        etaSubtitle.innerText = "Away from your location";
+        trafficText.innerText = "Connecting to Traffic Control IoT...";
+        
+        setTimeout(() => trafficText.innerText = "Signal Override Active: Securing route...", 1000);
+        setTimeout(() => { tl1Marker.setStyle({fillColor: '#4CAF50', color: '#81C784'}); trafficText.innerText = "🟢 Upcoming intersection signal turned green."; }, 2000);
+        setTimeout(() => { etaElement.innerText = "4 Min"; trackAmbMarker.setLatLng([22.4940, 88.3466]); }, 2500);
+        setTimeout(() => { tl2Marker.setStyle({fillColor: '#4CAF50', color: '#81C784'}); trafficText.innerText = "🟢 Tollygunge crossing cleared."; }, 4500);
+        setTimeout(() => { etaElement.innerText = "1 Min"; trackAmbMarker.setLatLng([22.4948, 88.3472]); }, 5000);
+        
+        setTimeout(() => {
+            etaElement.innerText = "Arrived!";
+            etaSubtitle.innerText = "Please board the ambulance safely";
+            trackAmbMarker.setLatLng(endPoint); // Arrive
+            trafficText.innerText = "Ambulance has safely arrived at patient location.";
+            
+            // Show "Start Journey to Hospital" button
+            document.getElementById('phase2-btn').style.display = 'flex';
+        }, 7500);
+    }
+
+    // Phase 2: Patient Location to Hospital
+    function startTrackingPhase2() {
+        const startPoint = tollygunge; // From User Location
+        const endPoint = [22.4925, 88.3456]; // To MR Bangur Hospital
+
+        document.getElementById('phase2-btn').style.display = 'none';
+        document.getElementById('tracking-title').innerText = "En Route to Hospital";
+
+        trackMap.eachLayer(layer => {
+            if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.CircleMarker) {
+                trackMap.removeLayer(layer);
+            }
+        });
+
+        // Solid red line indicating critical route back
+        L.polyline([startPoint, endPoint], {color: '#E53935', weight: 4}).addTo(trackMap);
+        L.marker(endPoint, {icon: hospIcon}).addTo(trackMap); // Destination
+
+        trackAmbMarker = L.marker(startPoint, {icon: ambulanceIcon}).addTo(trackMap);
+        trackMap.fitBounds(L.latLngBounds([startPoint, endPoint]), {padding: [20, 20]});
+
+        const etaElement = document.getElementById('eta');
+        const etaSubtitle = document.getElementById('eta-subtitle');
+        const trafficText = document.getElementById('traffic-text');
+
+        etaElement.innerText = "7 Min";
+        etaSubtitle.innerText = "To M R Bangur Emergency Ward";
+        trafficText.innerText = "Patient secured. Initiating green corridor transport...";
+
+        setTimeout(() => { etaElement.innerText = "5 Min"; trackAmbMarker.setLatLng([22.4948, 88.3472]); }, 2000);
+        setTimeout(() => { trafficText.innerText = "🟢 Traffic cleared by local police. Maintaining speed."; }, 3500);
+        setTimeout(() => { etaElement.innerText = "2 Min"; trackAmbMarker.setLatLng([22.4940, 88.3466]); }, 5000);
+        
+        setTimeout(() => {
+            etaElement.innerText = "Arrived!";
+            etaSubtitle.innerText = "Patient transferred to Emergency Unit";
+            trackAmbMarker.setLatLng(endPoint);
+            trafficText.innerText = "Journey completed safely.";
+            
+            setTimeout(() => {
+                navigate('review-screen');
+                resetRating();
+            }, 3000);
+        }, 8000);
+    }
+
+    let currentRating = 0;
+    function rateStar(stars) {
+        currentRating = stars;
+        for(let i = 1; i <= 5; i++) {
+            const starEl = document.getElementById('star-' + i);
+            if(i <= stars) {
+                starEl.style.color = '#F59E0B';
+            } else {
+                starEl.style.color = '#E5E7EB';
+            }
+        }
+    }
+
+    function resetRating() {
+        currentRating = 0;
+        for(let i = 1; i <= 5; i++) {
+            document.getElementById('star-' + i).style.color = '#E5E7EB';
+        }
+    }
+
+    function submitReview() {
+        navigate('home-screen');
+    }
+
+    // Functional Profile Logic
+    function toggleProfileEdit() {
+        const viewMode = document.getElementById('profile-view-mode');
+        const editMode = document.getElementById('profile-edit-mode');
+        
+        if (viewMode.style.display === 'none') {
+            viewMode.style.display = 'block';
+            editMode.style.display = 'none';
+        } else {
+            viewMode.style.display = 'none';
+            editMode.style.display = 'block';
+        }
+    }
+
+    function saveProfile() {
+        // Get values
+        const name = document.getElementById('edit-name').value;
+        const phone = document.getElementById('edit-phone').value;
+        const blood = document.getElementById('edit-blood').value;
+        const emContact = document.getElementById('edit-em-contact').value;
+        const history = document.getElementById('edit-history').value;
+        
+        // Update DOM
+        document.getElementById('display-name').innerText = name;
+        document.getElementById('display-phone').innerText = phone;
+        document.getElementById('display-blood').innerText = blood;
+        document.getElementById('display-em-contact').innerText = emContact;
+        document.getElementById('display-history').innerText = history || 'None';
+
+        // Update Initials
+        if (name) {
+            const parts = name.split(' ');
+            let initials = parts[0][0];
+            if(parts.length > 1) initials += parts[parts.length-1][0];
+            document.getElementById('profile-initials').innerText = initials.toUpperCase();
+        }
+
+        // Auto-fill Patient details for convenience
+        document.getElementById('patient-name').value = name;
+        document.getElementById('patient-phone').value = phone.replace('+91 ', '');
+        
+        toggleProfileEdit();
+    }
+
+    // Chatbot functionality
+    function toggleChat() {
+        const chatWindow = document.getElementById('chatbot-window');
+        chatWindow.style.display = chatWindow.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('chatbot-input');
+        const text = input.value.trim();
+        if (!text) return;
+
+        addChatBubble(text, 'user');
+        input.value = '';
+
+        setTimeout(() => {
+            let response = "I'm sorry, I don't understand. Please call our 24/7 helpline: 102.";
+            const lowerText = text.toLowerCase();
+            
+            if (lowerText.includes("help") || lowerText.includes("emergency")) {
+                response = "If this is a critical emergency, please bypass the app and dial 911 or 100 immediately.";
+            } else if (lowerText.includes("cost") || lowerText.includes("price") || lowerText.includes("fare")) {
+                response = "Basic Life Support starts at ₹1200. Advanced Life Support starts at ₹2500.";
+            } else if (lowerText.includes("how") || lowerText.includes("use") || lowerText.includes("guide") || lowerText.includes("book")) {
+                response = "To use the app: 1. Click 'Request Ambulance Now'. 2. Choose your Location. 3. Select a Hospital. 4. Complete payment to dispatch the ambulance.";
+            }
+
+            addChatBubble(response, 'bot');
+        }, 800);
+    }
+
+    function addChatBubble(text, sender) {
+        const chatBox = document.getElementById('chatbot-messages');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `msg ${sender}`;
+        msgDiv.innerText = text;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    document.getElementById('chatbot-input').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') sendMessage();
+    });
+</script>
+
+</body>
+</html>
